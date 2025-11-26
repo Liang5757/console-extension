@@ -1,0 +1,30 @@
+# Build output
+out/
+dist/
+
+# Dependencies
+node_modules/
+
+# VS Code test
+.vscode-test/
+
+# Extension package
+*.vsix
+
+# Local History (VS Code extension)
+.history/
+
+# Claude Code
+.claude/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# TypeScript cache
+*.tsbuildinfo
+

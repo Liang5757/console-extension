@@ -1,0 +1,162 @@
+{
+  "name": "console-extension",
+  "displayName": "Console Extension",
+  "description": "Smart console.log insertion tool with intelligent variable extraction and rich configuration options",
+  "version": "0.0.1",
+  "publisher": "Liang5757",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Liang5757/console-extension"
+  },
+  "keywords": [
+    "console",
+    "log",
+    "debug",
+    "javascript",
+    "typescript",
+    "productivity"
+  ],
+  "engines": {
+    "vscode": "^1.106.1"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "console-extension.insertConsoleLog",
+        "title": "Insert Console Log"
+      },
+      {
+        "command": "console-extension.goToLog",
+        "title": "Go to Console Log"
+      },
+      {
+        "command": "console-extension.removeLog",
+        "title": "Remove Console Log",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "console-extension.clearAllLogs",
+        "title": "Clear All Console Logs",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "console-extension.refreshLogs",
+        "title": "Refresh Console Logs",
+        "icon": "$(refresh)"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "consoleLogExplorer",
+          "name": "Console Logs",
+          "icon": "$(output)",
+          "contextualTitle": "Console Logs"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "console-extension.refreshLogs",
+          "when": "view == consoleLogExplorer",
+          "group": "navigation"
+        },
+        {
+          "command": "console-extension.clearAllLogs",
+          "when": "view == consoleLogExplorer",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "console-extension.removeLog",
+          "when": "view == consoleLogExplorer && viewItem == consoleLogItem",
+          "group": "inline"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "console-extension.insertConsoleLog",
+        "key": "ctrl+shift+l",
+        "mac": "cmd+shift+l",
+        "when": "editorTextFocus"
+      }
+    ],
+    "configuration": {
+      "title": "Console Extension",
+      "properties": {
+        "consoleExtension.prefix": {
+          "type": "string",
+          "default": "[debug]",
+          "description": "Prefix for console.log message to identify logs inserted by this extension."
+        },
+        "consoleExtension.quote": {
+          "type": "string",
+          "enum": [
+            "'",
+            "\"",
+            "`"
+          ],
+          "default": "'",
+          "description": "Quote style for log message strings."
+        },
+        "consoleExtension.semicolon": {
+          "type": "boolean",
+          "default": true,
+          "description": "Add semicolon at the end of the log statement."
+        },
+        "consoleExtension.insertFileName": {
+          "type": "boolean",
+          "default": false,
+          "description": "Insert file name (or relative path if file is named 'index') before the log message."
+        },
+        "consoleExtension.insertLineNumber": {
+          "type": "boolean",
+          "default": false,
+          "description": "Insert current line number before the log message."
+        },
+        "consoleExtension.insertEnclosingClass": {
+          "type": "boolean",
+          "default": false,
+          "description": "Insert the enclosing class name in the log message."
+        },
+        "consoleExtension.insertEnclosingFunction": {
+          "type": "boolean",
+          "default": false,
+          "description": "Insert the enclosing function name in the log message."
+        },
+        "consoleExtension.enableTreeView": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the Console Logs tree view. Reload window to apply changes."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.106.1",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "22.x",
+    "typescript-eslint": "^8.46.3",
+    "eslint": "^9.39.1",
+    "typescript": "^5.9.3",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.5.2"
+  },
+  "packageManager": "pnpm@10.12.4+sha512.5ea8b0deed94ed68691c9bad4c955492705c5eeb8a87ef86bc62c74a26b037b08ff9570f108b2e4dbd1dd1a9186fea925e527f141c648e85af45631074680184"
+}
