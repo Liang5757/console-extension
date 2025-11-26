@@ -17,6 +17,9 @@ node_modules/
 # Claude Code
 .claude/
 
+# JetBrain
+.idea/**
+
 # OS files
 .DS_Store
 Thumbs.db
