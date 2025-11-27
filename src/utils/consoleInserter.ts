@@ -67,14 +67,31 @@ export function insertConsoleLogForVariables(
 }
 
 /**
- * 插入 console.log snippet 模板（无选中变量的情况）
+ * 插入 console.log snippet 模板（无选中变量或变量提取失败的情况）
  * @param editor VS Code 编辑器实例
+ * @param selectedVariables 可选的选中变量数组（当有 placeholder 时使用）
  */
-export function insertConsoleLogSnippet(editor: vscode.TextEditor): void {
+export function insertConsoleLogSnippet(
+  editor: vscode.TextEditor,
+  selectedVariables?: SelectedVariable[]
+): void {
   const config = getConfig();
-  const line = editor.selection.active.line;
-  const lineText = editor.document.lineAt(line).text;
-  const indent = lineText.match(/^(\s*)/)?.[1] || "";
+
+  // 确定插入位置和缩进
+  let insertLine: number;
+  let indent: string;
+
+  if (selectedVariables && selectedVariables.length > 0) {
+    // 如果有 selectedVariables（变量提取失败的情况），在最后一个选中变量之后插入
+    const lastSelection = selectedVariables[selectedVariables.length - 1];
+    insertLine = lastSelection.line;
+    indent = lastSelection.indent;
+  } else {
+    // 否则，在当前光标位置插入
+    insertLine = editor.selection.active.line;
+    const lineText = editor.document.lineAt(insertLine).text;
+    indent = lineText.match(/^(\s*)/)?.[1] || "";
+  }
 
   // 构建 snippet 模板，根据配置动态构建
   const messageParts: string[] = [];
@@ -94,6 +111,12 @@ export function insertConsoleLogSnippet(editor: vscode.TextEditor): void {
     `${indent}${snippetTemplate}\n`
   );
 
-  const position = new vscode.Position(line + 1, 0);
+  const position = new vscode.Position(insertLine + 1, 0);
   editor.insertSnippet(snippetString, position);
+
+  // 如果有 placeholder，标记该文件为已追踪
+  if (selectedVariables && selectedVariables.some((v) => v.isPlaceholder) && tracker) {
+    const filePath = editor.document.uri.fsPath;
+    tracker.trackFile(filePath);
+  }
 }

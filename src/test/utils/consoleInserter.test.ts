@@ -155,5 +155,67 @@ suite("Console Inserter Test Suite", () => {
         "workbench.action.closeActiveEditor"
       );
     });
+
+    test("应该在提取失败时使用 snippet（带 placeholder）", async () => {
+      const document = await vscode.workspace.openTextDocument({
+        content: "const x = 1;\nconst y = 2;\n",
+        language: "javascript",
+      });
+
+      const editor = await vscode.window.showTextDocument(document);
+
+      // 创建一个 placeholder 变量（提取失败的情况）
+      const selectedVariables: SelectedVariable[] = [
+        { text: "", line: 0, indent: "", isPlaceholder: true },
+      ];
+
+      insertConsoleLogSnippet(editor, selectedVariables);
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      const content = editor.document.getText();
+      const lines = content.split("\n");
+
+      // 应该在第 0 行之后插入 snippet（带占位符）
+      // snippet 中的 ${1:variable} 会被 VS Code 替换为占位符，所以测试中会看到 "variable"
+      assert.ok(lines[1].includes("console.log"));
+      // 检查是否有占位符标记（snippet 被处理后会包含 variable）
+      assert.ok(lines[1].includes("variable"));
+
+      await vscode.commands.executeCommand(
+        "workbench.action.closeActiveEditor"
+      );
+    });
+
+    test("应该在多个 placeholder 中保持正确的缩进", async () => {
+      const document = await vscode.workspace.openTextDocument({
+        content: "function test() {\n  const a = 1;\n  const b = 2;\n}\n",
+        language: "javascript",
+      });
+
+      const editor = await vscode.window.showTextDocument(document);
+
+      // 创建多个 placeholder 变量
+      const selectedVariables: SelectedVariable[] = [
+        { text: "", line: 1, indent: "  ", isPlaceholder: true },
+        { text: "", line: 2, indent: "  ", isPlaceholder: true },
+      ];
+
+      insertConsoleLogSnippet(editor, selectedVariables);
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      const content = editor.document.getText();
+      const lines = content.split("\n");
+
+      // 应该在最后一个选中变量之后插入，并保持缩进
+      assert.ok(lines[3].startsWith("  console.log"));
+      // snippet 会被处理，所以会看到 variable 占位符
+      assert.ok(lines[3].includes("variable"));
+
+      await vscode.commands.executeCommand(
+        "workbench.action.closeActiveEditor"
+      );
+    });
   });
 });
