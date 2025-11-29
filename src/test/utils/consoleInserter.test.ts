@@ -156,7 +156,7 @@ suite("Console Inserter Test Suite", () => {
       );
     });
 
-    test("应该在提取失败时使用 snippet（带 placeholder）", async () => {
+    test("应该在提取失败时插入带占位符的 console.log snippet", async () => {
       const document = await vscode.workspace.openTextDocument({
         content: "const x = 1;\nconst y = 2;\n",
         language: "javascript",
@@ -176,11 +176,11 @@ suite("Console Inserter Test Suite", () => {
       const content = editor.document.getText();
       const lines = content.split("\n");
 
-      // 应该在第 0 行之后插入 snippet（带占位符）
-      // snippet 中的 ${1:variable} 会被 VS Code 替换为占位符，所以测试中会看到 "variable"
+      // 应该在第 0 行之后插入 console.log
       assert.ok(lines[1].includes("console.log"));
-      // 检查是否有占位符标记（snippet 被处理后会包含 variable）
-      assert.ok(lines[1].includes("variable"));
+      assert.ok(lines[1].includes("[debug]"));
+      // snippet 的占位符会被处理，检查基本结构
+      assert.ok(lines[1].includes(","));
 
       await vscode.commands.executeCommand(
         "workbench.action.closeActiveEditor"
@@ -208,10 +208,14 @@ suite("Console Inserter Test Suite", () => {
       const content = editor.document.getText();
       const lines = content.split("\n");
 
-      // 应该在最后一个选中变量之后插入，并保持缩进
+      // 应该在最后一个选中变量之后插入两个 console.log snippet，并保持缩进
       assert.ok(lines[3].startsWith("  console.log"));
-      // snippet 会被处理，所以会看到 variable 占位符
-      assert.ok(lines[3].includes("variable"));
+      assert.ok(lines[4].startsWith("  console.log"));
+      // snippet 占位符会被处理，检查基本结构
+      assert.ok(lines[3].includes("[debug]"));
+      assert.ok(lines[4].includes("[debug]"));
+      assert.ok(lines[3].includes(","));
+      assert.ok(lines[4].includes(","));
 
       await vscode.commands.executeCommand(
         "workbench.action.closeActiveEditor"

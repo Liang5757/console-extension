@@ -73,6 +73,38 @@ suite("Variable Extractor Test Suite", () => {
       assert.deepStrictEqual(result, ["!a", "b", "Boolean(c)"]);
     });
 
+    test("应该提取多行 if 条件（带注释）", () => {
+      const text = `if (
+  !process.env.CI
+  // rspack-ecosystem-ci would set this
+  // https://github.com/rspack-contrib/rspack-ecosystem-ci/blob/113d2338da254ca341313a4a54afe789b45b1508/utils.ts#L108
+  || process.env['ECOSYSTEM_CI']
+) {`;
+      const result = extractVariableNames(text);
+      assert.deepStrictEqual(result, ["!process.env.CI", "process.env['ECOSYSTEM_CI']"]);
+    });
+
+    test("应该提取多行 if 条件（不带注释）", () => {
+      const text = `if (
+  !isProduction &&
+  enableDebug ||
+  process.env.FORCE_DEBUG
+) {`;
+      const result = extractVariableNames(text);
+      assert.deepStrictEqual(result, ["!isProduction", "enableDebug", "process.env.FORCE_DEBUG"]);
+    });
+
+    test("应该提取多行复杂逻辑条件", () => {
+      const text = `if (
+  user.isAdmin &&
+  !user.isBanned ||
+  Boolean(user.hasPermission) &&
+  user.role === 'moderator'
+) {`;
+      const result = extractVariableNames(text);
+      assert.deepStrictEqual(result, ["user.isAdmin", "!user.isBanned", "Boolean(user.hasPermission)", "user.role"]);
+    });
+
     test("应该过滤 if 语句中的布尔字面量", () => {
       const text = "if (flag && true || false)";
       const result = extractVariableNames(text);

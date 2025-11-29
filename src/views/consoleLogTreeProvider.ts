@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { ConsoleLogItem } from '../types/consoleLogItem';
 import { ConsoleLogTreeItem } from './consoleLogTreeItem';
 import { ConsoleLogTracker } from '../utils/consoleLogTracker';
 
@@ -59,10 +58,10 @@ export class ConsoleLogTreeProvider implements vscode.TreeDataProvider<ConsoleLo
       const treeItem = new ConsoleLogTreeItem(
         fileName,
         vscode.TreeItemCollapsibleState.Expanded,
-        undefined
+        undefined,
+        vscode.Uri.file(filePath)
       );
       treeItem.tooltip = relativePath;
-      treeItem.resourceUri = vscode.Uri.file(filePath);
 
       fileItems.push(treeItem);
     }

@@ -3,6 +3,60 @@ import { parse, Program } from "acorn";
 import { SelectedVariable } from "../types";
 
 /**
+ * 移除代码中的单行和多行注释
+ */
+function removeComments(code: string): string {
+  let result = code;
+  // 移除单行注释，但保留URL中的 //
+  const lines = result.split(/\r?\n/);
+  const processedLines = lines.map(line => {
+    // 查找注释的开始位置（不在字符串中，不在URL中）
+    const commentIndex = findCommentIndex(line);
+    if (commentIndex !== -1) {
+      return line.substring(0, commentIndex);
+    }
+    return line;
+  });
+  result = processedLines.join('\n');
+
+  // 移除多行注释 /* ... */
+  result = result.replace(/\/\*[\s\S]*?\*\//g, '');
+  return result;
+}
+
+/**
+ * 查找行中注释的开始位置，避免误删字符串中或URL中的 //
+ */
+function findCommentIndex(line: string): number {
+  let inString = false;
+  let stringChar = '';
+
+  for (let i = 0; i < line.length - 1; i++) {
+    const char = line[i];
+    const nextChar = line[i + 1];
+
+    if (inString) {
+      if (char === stringChar && (i === 0 || line[i - 1] !== '\\')) {
+        inString = false;
+      }
+    } else {
+      if (char === '"' || char === "'" || char === '`') {
+        inString = true;
+        stringChar = char;
+      } else if (char === '/' && nextChar === '/') {
+        // 检查是否是URL中的 //
+        if (i > 0 && line[i - 1] === ':') {
+          continue; // 跳过URL中的 //
+        }
+        return i;
+      }
+    }
+  }
+
+  return -1;
+}
+
+/**
  * 从文本中提取变量名，使用 AST 语法分析
  * @param text 待提取的文本
  * @returns 提取到的变量名数组
@@ -11,38 +65,41 @@ export function extractVariableNames(text: string): string[] {
   const variables: string[] = [];
   const variablesSet: Set<string> = new Set();
 
+  // 在解析前先移除注释，提高AST解析成功率
+  const textWithoutComments = removeComments(text);
+
   try {
     // 尝试解析为完整的程序
     let ast: Program;
     try {
-      ast = parse(text, {
+      ast = parse(textWithoutComments, {
         ecmaVersion: "latest",
         sourceType: "module",
       }) as Program;
     } catch {
       // 如果失败，尝试解析为表达式
       try {
-        ast = parse(`(${text})`, {
+        ast = parse(`(${textWithoutComments})`, {
           ecmaVersion: "latest",
           sourceType: "module",
         }) as Program;
       } catch {
         // 尝试作为块语句解析
         try {
-          ast = parse(`{${text}}`, {
+          ast = parse(`{${textWithoutComments}}`, {
             ecmaVersion: "latest",
             sourceType: "module",
           }) as Program;
         } catch {
           // 最后的备选：包装为函数体（添加大括号确保完整性）
           try {
-            ast = parse(`function f() { ${text}; }`, {
+            ast = parse(`function f() { ${textWithoutComments}; }`, {
               ecmaVersion: "latest",
               sourceType: "module",
             }) as Program;
           } catch {
             // 再次尝试添加大括号
-            ast = parse(`function f() { ${text} {} }`, {
+            ast = parse(`function f() { ${textWithoutComments} {} }`, {
               ecmaVersion: "latest",
               sourceType: "module",
             }) as Program;
@@ -51,11 +108,11 @@ export function extractVariableNames(text: string): string[] {
       }
     }
 
-    // 遍历 AST 提取变量，并传递原始文本用于处理 if 条件
-    extractVariablesFromAST(ast, variables, variablesSet, text);
+    // 遍历 AST 提取变量，并传递移除注释后的文本用于处理 if 条件
+    extractVariablesFromAST(ast, variables, variablesSet, textWithoutComments);
   } catch (error) {
     // 如果 AST 解析完全失败，回退到正则表达式（作为最后的手段）
-    fallbackExtractVariables(text, variablesSet);
+    fallbackExtractVariables(textWithoutComments, variablesSet);
     // 从 Set 转换回数组
     variables.push(...Array.from(variablesSet));
   }
@@ -95,6 +152,11 @@ function extractVariablesFromASTPass1(node: any, variables: string[], variablesS
     });
   }
 
+  // 处理单独的表达式语句（如用户选中单个变量名）
+  if (node.type === "ExpressionStatement" && node.expression) {
+    extractExpressionVariables(node.expression, variables, variablesSet, originalText);
+  }
+
   // 递归处理所有子节点（跳过条件处理）
   for (const key in node) {
     if (key === "start" || key === "end" || key === "loc" || key === "range") {
@@ -104,6 +166,10 @@ function extractVariablesFromASTPass1(node: any, variables: string[], variablesS
     if ((node.type === "IfStatement" || node.type === "WhileStatement") && key === "test") {
       continue;
     }
+    // 跳过已经处理过的 ExpressionStatement
+    if (node.type === "ExpressionStatement" && key === "expression") {
+      continue;
+    }
     const child = node[key];
     if (Array.isArray(child)) {
       child.forEach((item) => extractVariablesFromASTPass1(item, variables, variablesSet, originalText));
@@ -111,6 +177,91 @@ function extractVariablesFromASTPass1(node: any, variables: string[], variablesS
       extractVariablesFromASTPass1(child, variables, variablesSet, originalText);
     }
   }
+}
+
+/**
+ * 从表达式中提取变量
+ */
+function extractExpressionVariables(expression: any, variables: string[], variablesSet: Set<string>, originalText?: string): void {
+  if (!expression) {
+    return;
+  }
+
+  // 处理标识符：userName
+  if (expression.type === "Identifier") {
+    addVariable(variables, variablesSet, expression.name);
+    return;
+  }
+
+  // 处理成员访问：user.name, process.env.CI
+  if (expression.type === "MemberExpression") {
+    const memberExpr = buildMemberExpression(expression, originalText);
+    if (memberExpr) {
+      addVariable(variables, variablesSet, memberExpr);
+    }
+    return;
+  }
+
+  // 处理一元表达式：!flag, !!value
+  if (expression.type === "UnaryExpression" && (expression.operator === "!" || expression.operator === "~")) {
+    const operator = expression.operator === "!" ? "!" : "~";
+    if (expression.argument.type === "Identifier") {
+      addVariable(variables, variablesSet, operator + expression.argument.name);
+    } else if (expression.argument.type === "MemberExpression") {
+      const memberExpr = buildMemberExpression(expression.argument, originalText);
+      if (memberExpr) {
+        addVariable(variables, variablesSet, operator + memberExpr);
+      }
+    } else if (expression.argument.type === "UnaryExpression") {
+      // 处理双重否定：!!value
+      extractExpressionVariables(expression.argument, variables, variablesSet, originalText);
+    }
+    return;
+  }
+
+  // 处理调用表达式：Boolean(value)
+  if (expression.type === "CallExpression") {
+    // 从原始文本中提取函数调用表达式
+    if (originalText && expression.start !== undefined && expression.end !== undefined) {
+      const callExpr = originalText.substring(expression.start, expression.end);
+      addVariable(variables, variablesSet, callExpr);
+    }
+    return;
+  }
+}
+
+/**
+ * 从 MemberExpression 构建成员访问字符串
+ */
+function buildMemberExpression(node: any, originalText?: string): string | null {
+  // 如果有原始文本，直接从原始文本中提取
+  if (originalText && node.start !== undefined && node.end !== undefined) {
+    return originalText.substring(node.start, node.end);
+  }
+
+  // 否则递归构建
+  if (node.type === "Identifier") {
+    return node.name;
+  }
+
+  if (node.type === "MemberExpression") {
+    const object = buildMemberExpression(node.object, originalText);
+    if (!object) {
+      return null;
+    }
+
+    if (node.computed) {
+      // 计算属性：obj[key]
+      const property = buildMemberExpression(node.property, originalText);
+      return `${object}[${property}]`;
+    } else {
+      // 点访问：obj.key
+      const property = node.property.name;
+      return `${object}.${property}`;
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -263,7 +414,7 @@ function extractConditionFromText(text: string, keyword: string): string {
   const simpleCondition = match[1];
   // 检查是否有平衡的括号（简单启发式方法）
   if (isBalanced(simpleCondition)) {
-    return simpleCondition;
+    return removeComments(simpleCondition);
   }
 
   // 否则手动匹配括号
@@ -295,7 +446,7 @@ function extractConditionFromText(text: string, keyword: string): string {
     i++;
   }
 
-  return condition;
+  return removeComments(condition);
 }
 
 /**
@@ -320,16 +471,22 @@ function isBalanced(str: string): boolean {
  * 从 if/while 条件中提取变量（带顺序）
  */
 function extractVariablesFromConditionWithOrder(conditionText: string, variables: string[], variablesSet: Set<string>): void {
+  // 先移除比较运算符右侧的值（字符串、数字等），避免它们被误识别为变量
+  let cleanedText = conditionText;
+  // 移除比较运算符及其右侧的值：=== 'value', !== 123, == "test", != null 等
+  cleanedText = cleanedText.replace(/[!=]==?\s*(?:'[^']*'|"[^"]*"|`[^`]*`|\d+|true|false|null|undefined)/g, '');
+
   // 提取基本变量和操作符组合
-  // 匹配：!var, !!var, var, var.prop, Boolean(var) 等模式
-  const varPattern = /(!+)?([a-zA-Z_$][a-zA-Z0-9_$.]*(?:\([^)]*\))?)/g;
+  // 匹配：!var, !!var, var, var.prop, var['prop'], var["prop"], Boolean(var) 等模式
+  // 直接在正则表达式中匹配中括号访问，避免使用占位符
+  const varPattern = /(!+)?([a-zA-Z_$][a-zA-Z0-9_$]*(?:(?:\.[a-zA-Z_$][a-zA-Z0-9_$]*|\['[^']*'\]|\["[^"]*"\])*)?(?:\([^)]*\))?)/g;
   let match;
-  while ((match = varPattern.exec(conditionText)) !== null) {
+  while ((match = varPattern.exec(cleanedText)) !== null) {
     const prefix = match[1] || ""; // 获取前缀符号（如 ! 或 !!）
     const fullVarName = match[2]; // 完整变量名（包含可能的函数调用或成员访问）
 
     // 过滤掉布尔字面量和关键字
-    const baseVarName = fullVarName.split("(")[0]; // 如果是函数调用，获取函数名
+    const baseVarName = fullVarName.split("(")[0].split("[")[0].split(".")[0]; // 获取基础变量名
     if (!["true", "false", "null", "undefined"].includes(baseVarName)) {
       addVariable(variables, variablesSet, prefix + fullVarName);
     }
@@ -408,12 +565,16 @@ function fallbackExtractVariables(text: string, variables: Set<string>): void {
       i++;
     }
 
-    const varPattern = /(!+)?([a-zA-Z_$][a-zA-Z0-9_$.]*(?:\([^)]*\))?)/g;
+    // 先移除比较运算符右侧的值（字符串、数字等），避免它们被误识别为变量
+    let cleanedCondition = condition.replace(/[!=]==?\s*(?:'[^']*'|"[^"]*"|`[^`]*`|\d+|true|false|null|undefined)/g, '');
+
+    // 使用支持中括号访问的正则表达式
+    const varPattern = /(!+)?([a-zA-Z_$][a-zA-Z0-9_$]*(?:(?:\.[a-zA-Z_$][a-zA-Z0-9_$]*|\['[^']*'\]|\["[^"]*"\])*)?(?:\([^)]*\))?)/g;
     let varMatch;
-    while ((varMatch = varPattern.exec(condition)) !== null) {
+    while ((varMatch = varPattern.exec(cleanedCondition)) !== null) {
       const prefix = varMatch[1] || "";
       const fullVarName = varMatch[2];
-      const baseVarName = fullVarName.split("(")[0];
+      const baseVarName = fullVarName.split("(")[0].split("[")[0].split(".")[0];
       if (!["true", "false", "null", "undefined"].includes(baseVarName)) {
         variables.add(prefix + fullVarName);
       }
@@ -433,38 +594,40 @@ export function collectSelectedVariables(
   const seenVariables = new Set<string>(); // 用于去重
 
   for (const selection of editor.selections) {
-    const text = editor.document.getText(selection).trim();
+    let text = editor.document.getText(selection).trim();
     // 取 start 和 end 中行号较大的那个，确保无论选择方向如何都能获取正确的行号
     const line = Math.max(selection.start.line, selection.end.line);
     const lineText = editor.document.lineAt(line).text;
     const indent = lineText.match(/^(\s*)/)?.[1] || "";
 
-    if (text) {
-      // 尝试从选中文本中提取变量名
-      const extractedVars = extractVariableNames(text);
+    // 如果没有选中文本（selection 为空，即光标位置），使用当前行的文本
+    if (!text && selection.isEmpty) {
+      text = lineText.trim();
+    }
 
-      if (extractedVars.length > 0) {
-        // 如果提取到变量，为每个变量创建一个条目
-        extractedVars.forEach((varName) => {
-          // 只添加未见过的变量
-          if (!seenVariables.has(varName)) {
-            seenVariables.add(varName);
-            selectedVariables.push({ text: varName, line, indent });
-          }
-        });
-      } else {
-        // 如果没有提取到变量，添加占位符以供用户手动输入
-        // 占位符使用一个特殊的标记，不会被用作真实的变量名
-        const placeholderKey = `__placeholder_${line}__`;
-        if (!seenVariables.has(placeholderKey)) {
-          seenVariables.add(placeholderKey);
-          selectedVariables.push({
-            text: "",  // 空变量名
-            line,
-            indent,
-            isPlaceholder: true  // 标记为占位符
-          });
+    // 尝试从选中文本中提取变量名
+    const extractedVars = text ? extractVariableNames(text) : [];
+
+    if (extractedVars.length > 0) {
+      // 如果提取到变量，为每个变量创建一个条目
+      extractedVars.forEach((varName) => {
+        // 只添加未见过的变量
+        if (!seenVariables.has(varName)) {
+          seenVariables.add(varName);
+          selectedVariables.push({ text: varName, line, indent });
         }
+      });
+    } else {
+      // 如果没有提取到变量（包括空白行），添加占位符
+      const placeholderKey = `__placeholder_${line}__`;
+      if (!seenVariables.has(placeholderKey)) {
+        seenVariables.add(placeholderKey);
+        selectedVariables.push({
+          text: "",  // 空变量名
+          line,
+          indent,
+          isPlaceholder: true  // 标记为占位符
+        });
       }
     }
   }

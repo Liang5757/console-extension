@@ -36,6 +36,35 @@ export function getConfig(): LogConfig {
 }
 
 /**
+ * 根据变量名选择合适的引号，避免冲突
+ * @param variableName 变量名
+ * @param configQuote 配置的引号
+ * @returns 合适的引号类型
+ */
+function selectQuoteForVariable(variableName: string, configQuote: "'" | '"' | "`"): "'" | '"' | "`" {
+  const hasSingleQuote = variableName.includes("'");
+  const hasDoubleQuote = variableName.includes('"');
+
+  // 如果同时包含单引号和双引号，使用反引号
+  if (hasSingleQuote && hasDoubleQuote) {
+    return "`";
+  }
+
+  // 如果包含单引号，使用双引号
+  if (hasSingleQuote) {
+    return '"';
+  }
+
+  // 如果包含双引号，使用单引号
+  if (hasDoubleQuote) {
+    return "'";
+  }
+
+  // 否则使用配置的引号
+  return configQuote;
+}
+
+/**
  * 构建日志语句
  * @param variableName 变量名
  * @param editor 编辑器实例
@@ -102,7 +131,9 @@ export function buildLogStatement(
 
   // 组合消息
   const message = messageParts.join(" ");
-  const quote = config.quote;
+
+  // 根据变量名智能选择引号，避免冲突
+  const quote = selectQuoteForVariable(variableName, config.quote);
 
   logStatement += `${quote}${message}${quote}, ${variableName}`;
   logStatement += ")";

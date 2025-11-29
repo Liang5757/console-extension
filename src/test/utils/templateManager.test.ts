@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import { applyTemplate, templateToSnippet } from "../../utils/templateManager";
+import { applyTemplate, templateToSnippet, buildLogStatement } from "../../utils/templateManager";
 
 suite("Template Manager Test Suite", () => {
   suite("applyTemplate", () => {
@@ -52,6 +52,45 @@ suite("Template Manager Test Suite", () => {
       const template = "console.log('{variable}:', {variable});";
       const result = applyTemplate(template, "");
       assert.strictEqual(result, "console.log(':', );");
+    });
+  });
+
+  suite("buildLogStatement - 引号冲突处理", () => {
+    test("变量名包含单引号时应该使用双引号", () => {
+      const variableName = "process.env['ECOSYSTEM_CI']";
+      const result = buildLogStatement(variableName);
+      // 应该使用双引号避免冲突
+      assert.strictEqual(
+        result,
+        `console.log("[debug] process.env['ECOSYSTEM_CI']:", process.env['ECOSYSTEM_CI']);`
+      );
+    });
+
+    test("变量名包含双引号时应该使用单引号", () => {
+      const variableName = 'obj["key"]';
+      const result = buildLogStatement(variableName);
+      // 应该使用单引号避免冲突
+      assert.strictEqual(
+        result,
+        `console.log('[debug] obj["key"]:', obj["key"]);`
+      );
+    });
+
+    test("变量名同时包含单引号和双引号时应该使用反引号", () => {
+      const variableName = `obj["key"]['value']`;
+      const result = buildLogStatement(variableName);
+      // 应该使用反引号避免冲突
+      assert.strictEqual(
+        result,
+        `console.log(\`[debug] obj["key"]['value']:\`, obj["key"]['value']);`
+      );
+    });
+
+    test("普通变量名应该使用配置的引号", () => {
+      const variableName = "userName";
+      const result = buildLogStatement(variableName);
+      // 默认配置使用单引号
+      assert.strictEqual(result, "console.log('[debug] userName:', userName);");
     });
   });
 
