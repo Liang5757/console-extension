@@ -17,6 +17,70 @@ export function setTracker(logTracker: ConsoleLogTracker): void {
 }
 
 /**
+ * 构建上下文信息部分（文件名、类名、函数名、行号）
+ * @param editor VS Code 编辑器实例
+ * @param line 行号
+ * @returns 上下文信息的字符串数组
+ */
+function buildContextMessageParts(
+  editor: vscode.TextEditor,
+  line: number
+): string[] {
+  const config = getConfig();
+  const messageParts: string[] = [];
+
+  // 添加前缀
+  messageParts.push(config.prefix);
+
+  // 添加文件名或相对路径
+  if (config.insertFileName) {
+    const fileName = path.basename(
+      editor.document.fileName,
+      path.extname(editor.document.fileName)
+    );
+    if (fileName.toLowerCase() === "index") {
+      const workspaceFolder = vscode.workspace.getWorkspaceFolder(
+        editor.document.uri
+      );
+      if (workspaceFolder) {
+        const relativePath = path.relative(
+          workspaceFolder.uri.fsPath,
+          editor.document.fileName
+        );
+        messageParts.push(relativePath.replace(/\\/g, "/"));
+      } else {
+        messageParts.push(path.basename(editor.document.fileName));
+      }
+    } else {
+      messageParts.push(path.basename(editor.document.fileName));
+    }
+  }
+
+  // 添加类名.函数名（如果都存在）或单独添加
+  const className = config.insertEnclosingClass
+    ? findEnclosingClass(editor, line)
+    : null;
+  const functionName = config.insertEnclosingFunction
+    ? extractContextName(editor, line) || null
+    : null;
+
+  if (className && functionName) {
+    messageParts.push(`${className}.${functionName}()`);
+  } else if (className) {
+    messageParts.push(className);
+  } else if (functionName) {
+    messageParts.push(`${functionName}()`);
+  }
+
+  // 添加行号（在函数名后面）
+  if (config.insertLineNumber) {
+    messageParts.push(`line ${line + 1}`);
+  }
+
+  return messageParts;
+}
+
+/**
  * 插入 console.log 语句（有选中变量的情况）
  * @param editor VS Code 编辑器实例
  * @param selectedVariables 选中的变量信息数组
@@ -98,49 +162,10 @@ export function insertConsoleLogSnippet(
 
     // 生成 snippet，每个 placeholder 使用相同的变量引用
     let snippetText = "";
-    sortedVariables.forEach((item, index) => {
+    sortedVariables.forEach((item) => {
       // 使用 ${1} 作为占位符，出现在消息和变量两个位置
       // 这样用户输入一次后，两个位置会同步
-      const messageParts: string[] = [];
-      messageParts.push(config.prefix);
-
-      // 添加文件名或相对路径
-      if (config.insertFileName) {
-        const fileName = path.basename(editor.document.fileName, path.extname(editor.document.fileName));
-        if (fileName.toLowerCase() === 'index') {
-          const workspaceFolder = vscode.workspace.getWorkspaceFolder(editor.document.uri);
-          if (workspaceFolder) {
-            const relativePath = path.relative(workspaceFolder.uri.fsPath, editor.document.fileName);
-            messageParts.push(relativePath.replace(/\\/g, '/'));
-          } else {
-            messageParts.push(path.basename(editor.document.fileName));
-          }
-        } else {
-          messageParts.push(path.basename(editor.document.fileName));
-        }
-      }
-
-      // 添加类名.函数名（如果都存在）或单独添加
-      const className = config.insertEnclosingClass
-        ? findEnclosingClass(editor, item.line)
-        : null;
-      const functionName = config.insertEnclosingFunction
-        ? extractContextName(editor, item.line) || null
-        : null;
-
-      if (className && functionName) {
-        messageParts.push(`${className}.${functionName}()`);
-      } else if (className) {
-        messageParts.push(className);
-      } else if (functionName) {
-        messageParts.push(`${functionName}()`);
-      }
-
-      // 添加行号（在函数名后面）
-      if (config.insertLineNumber) {
-        messageParts.push(`line ${item.line + 1}`);
-      }
-
+      const messageParts = buildContextMessageParts(editor, item.line);
       messageParts.push("${1}:");
       const message = messageParts.join(" ");
 
@@ -175,46 +200,7 @@ export function insertConsoleLogSnippet(
       indent = lineText.match(/^(\s*)/)?.[1] || "";
     }
 
-    const messageParts: string[] = [];
-    messageParts.push(config.prefix);
-
-    // 添加文件名或相对路径
-    if (config.insertFileName) {
-      const fileName = path.basename(editor.document.fileName, path.extname(editor.document.fileName));
-      if (fileName.toLowerCase() === 'index') {
-        const workspaceFolder = vscode.workspace.getWorkspaceFolder(editor.document.uri);
-        if (workspaceFolder) {
-          const relativePath = path.relative(workspaceFolder.uri.fsPath, editor.document.fileName);
-          messageParts.push(relativePath.replace(/\\/g, '/'));
-        } else {
-          messageParts.push(path.basename(editor.document.fileName));
-        }
-      } else {
-        messageParts.push(path.basename(editor.document.fileName));
-      }
-    }
-
-    // 添加类名.函数名（如果都存在）或单独添加
-    const className = config.insertEnclosingClass
-      ? findEnclosingClass(editor, insertLine)
-      : null;
-    const functionName = config.insertEnclosingFunction
-      ? extractContextName(editor, insertLine) || null
-      : null;
-
-    if (className && functionName) {
-      messageParts.push(`${className}.${functionName}()`);
-    } else if (className) {
-      messageParts.push(className);
-    } else if (functionName) {
-      messageParts.push(`${functionName}()`);
-    }
-
-    // 添加行号（在函数名后面）
-    if (config.insertLineNumber) {
-      messageParts.push(`line ${insertLine + 1}`);
-    }
-
+    const messageParts = buildContextMessageParts(editor, insertLine);
     messageParts.push("${1:variable}:");
 
     const message = messageParts.join(" ");
