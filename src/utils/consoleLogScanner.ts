@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { ConsoleLogItem } from '../types/consoleLogItem';
 import { getConfig } from './templateManager';
+import { extractContextName } from './contextExtractor';
 
 /**
  * Console.log 扫描器 - 仅识别本插件插入的 console.log
@@ -45,11 +46,15 @@ export class ConsoleLogScanner {
           }
         }
 
+        // 提取函数名或类名
+        const contextName = extractContextName(document, lineNum);
+
         items.push({
           filePath,
           line: lineNum,
           variableName,
-          logStatement: text.trim()
+          logStatement: text.trim(),
+          contextName
         });
       }
     }

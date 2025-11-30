@@ -129,7 +129,7 @@
         },
         "consoleExtension.insertEnclosingFunction": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "Insert the enclosing function name in the log message."
         },
         "consoleExtension.enableTreeView": {

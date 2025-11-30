@@ -1,11 +1,14 @@
 import * as vscode from "vscode";
+import * as path from "path";
 import { SelectedVariable } from "../types";
 import {
   buildLogStatement,
   getConfig,
+  findEnclosingClass,
 } from "./templateManager";
 import { ConsoleLogItem } from "../types/consoleLogItem";
 import { ConsoleLogTracker } from "./consoleLogTracker";
+import { extractContextName } from "./contextExtractor";
 
 let tracker: ConsoleLogTracker | undefined;
 
@@ -54,11 +57,15 @@ export function insertConsoleLogForVariables(
         tracker!.trackFile(filePath);
 
         sortedVariables.forEach((item, index) => {
+          // 提取函数名或类名
+          const contextName = extractContextName(editor, actualInsertLine + index);
+
           const logItem: ConsoleLogItem = {
             filePath,
             line: actualInsertLine + index,
             variableName: item.text,
             logStatement: logStatements[index],
+            contextName,
           };
           // tracker!.addConsoleLog(logItem);
         });
@@ -96,6 +103,44 @@ export function insertConsoleLogSnippet(
       // 这样用户输入一次后，两个位置会同步
       const messageParts: string[] = [];
       messageParts.push(config.prefix);
+
+      // 添加文件名或相对路径
+      if (config.insertFileName) {
+        const fileName = path.basename(editor.document.fileName, path.extname(editor.document.fileName));
+        if (fileName.toLowerCase() === 'index') {
+          const workspaceFolder = vscode.workspace.getWorkspaceFolder(editor.document.uri);
+          if (workspaceFolder) {
+            const relativePath = path.relative(workspaceFolder.uri.fsPath, editor.document.fileName);
+            messageParts.push(relativePath.replace(/\\/g, '/'));
+          } else {
+            messageParts.push(path.basename(editor.document.fileName));
+          }
+        } else {
+          messageParts.push(path.basename(editor.document.fileName));
+        }
+      }
+
+      // 添加类名.函数名（如果都存在）或单独添加
+      const className = config.insertEnclosingClass
+        ? findEnclosingClass(editor, item.line)
+        : null;
+      const functionName = config.insertEnclosingFunction
+        ? extractContextName(editor, item.line) || null
+        : null;
+
+      if (className && functionName) {
+        messageParts.push(`${className}.${functionName}()`);
+      } else if (className) {
+        messageParts.push(className);
+      } else if (functionName) {
+        messageParts.push(`${functionName}()`);
+      }
+
+      // 添加行号（在函数名后面）
+      if (config.insertLineNumber) {
+        messageParts.push(`line ${item.line + 1}`);
+      }
+
       messageParts.push("${1}:");
       const message = messageParts.join(" ");
 
@@ -132,6 +177,44 @@ export function insertConsoleLogSnippet(
 
     const messageParts: string[] = [];
     messageParts.push(config.prefix);
+
+    // 添加文件名或相对路径
+    if (config.insertFileName) {
+      const fileName = path.basename(editor.document.fileName, path.extname(editor.document.fileName));
+      if (fileName.toLowerCase() === 'index') {
+        const workspaceFolder = vscode.workspace.getWorkspaceFolder(editor.document.uri);
+        if (workspaceFolder) {
+          const relativePath = path.relative(workspaceFolder.uri.fsPath, editor.document.fileName);
+          messageParts.push(relativePath.replace(/\\/g, '/'));
+        } else {
+          messageParts.push(path.basename(editor.document.fileName));
+        }
+      } else {
+        messageParts.push(path.basename(editor.document.fileName));
+      }
+    }
+
+    // 添加类名.函数名（如果都存在）或单独添加
+    const className = config.insertEnclosingClass
+      ? findEnclosingClass(editor, insertLine)
+      : null;
+    const functionName = config.insertEnclosingFunction
+      ? extractContextName(editor, insertLine) || null
+      : null;
+
+    if (className && functionName) {
+      messageParts.push(`${className}.${functionName}()`);
+    } else if (className) {
+      messageParts.push(className);
+    } else if (functionName) {
+      messageParts.push(`${functionName}()`);
+    }
+
+    // 添加行号（在函数名后面）
+    if (config.insertLineNumber) {
+      messageParts.push(`line ${insertLine + 1}`);
+    }
+
     messageParts.push("${1:variable}:");
 
     const message = messageParts.join(" ");

@@ -16,7 +16,8 @@ export class ConsoleLogTreeItem extends vscode.TreeItem {
     if (consoleLogItem) {
       // 单个 console.log 条目
       this.tooltip = `${consoleLogItem.filePath}:${consoleLogItem.line + 1}`;
-      this.description = `L${consoleLogItem.line + 1}`;
+      // 优先显示函数名/类名，如果没有则显示行号
+      this.description = consoleLogItem.contextName || `L${consoleLogItem.line + 1}`;
       // 点击时跳转到 log
       this.command = {
         command: "console-extension.goToLog",
@@ -35,6 +36,9 @@ export class ConsoleLogTreeItem extends vscode.TreeItem {
       if (resourceUri) {
         this.resourceUri = resourceUri;
         this.iconPath = vscode.ThemeIcon.File;
+        // 在文件节点上显示相对路径
+        const relativePath = vscode.workspace.asRelativePath(resourceUri.fsPath);
+        this.description = relativePath;
       }
     }
   }

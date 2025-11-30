@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import * as path from "path";
+import { extractContextName } from "./contextExtractor";
 
 /**
  * 配置接口
@@ -30,7 +31,7 @@ export function getConfig(): LogConfig {
     insertEnclosingClass: config.get<boolean>("insertEnclosingClass", false),
     insertEnclosingFunction: config.get<boolean>(
       "insertEnclosingFunction",
-      false
+      true
     ),
   };
 }
@@ -105,17 +106,12 @@ export function buildLogStatement(
     }
   }
 
-  // 2. 添加行号
-  if (config.insertLineNumber && line !== undefined) {
-    messageParts.push(`L${line + 1}`);
-  }
-
-  // 3. 添加类名.函数名（如果都存在）或单独添加
+  // 2. 添加类名.函数名（如果都存在）或单独添加
   const className = config.insertEnclosingClass && editor && line !== undefined
     ? findEnclosingClass(editor, line)
     : null;
   const functionName = config.insertEnclosingFunction && editor && line !== undefined
-    ? findEnclosingFunction(editor, line)
+    ? extractContextName(editor, line) || null
     : null;
 
   if (className && functionName) {
@@ -124,6 +120,11 @@ export function buildLogStatement(
     messageParts.push(className);
   } else if (functionName) {
     messageParts.push(`${functionName}()`);
+  }
+
+  // 3. 添加行号（在函数名后面）
+  if (config.insertLineNumber && line !== undefined) {
+    messageParts.push(`line ${line + 1}`);
   }
 
   // 4. 添加变量名
@@ -172,7 +173,7 @@ export function templateToSnippet(template: string): string {
  * @param line 行号
  * @returns 类名或 null
  */
-function findEnclosingClass(
+export function findEnclosingClass(
   editor: vscode.TextEditor,
   line: number
 ): string | null {
@@ -191,28 +192,3 @@ function findEnclosingClass(
   return null;
 }
 
-/**
- * 查找包围的函数名
- * @param editor 编辑器实例
- * @param line 行号
- * @returns 函数名或 null
- */
-function findEnclosingFunction(
-  editor: vscode.TextEditor,
-  line: number
-): string | null {
-  const document = editor.document;
-  const functionPattern =
-    /(?:function\s+([a-zA-Z_$][a-zA-Z0-9_$]*)|([a-zA-Z_$][a-zA-Z0-9_$]*)\s*[=:]\s*(?:function|\([^)]*\)\s*=>))/;
-
-  // 向上查找函数定义
-  for (let i = line; i >= 0; i--) {
-    const lineText = document.lineAt(i).text;
-    const match = functionPattern.exec(lineText);
-    if (match) {
-      return match[1] || match[2];
-    }
-  }
-
-  return null;
-}
