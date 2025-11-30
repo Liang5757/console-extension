@@ -2,7 +2,7 @@
   "name": "console-extension",
   "displayName": "Console Extension",
   "description": "Smart console.log insertion tool with intelligent variable extraction and rich configuration options",
-  "version": "0.0.3",
+  "version": "1.0.0",
   "publisher": "Liang5757",
   "repository": {
     "type": "git",
