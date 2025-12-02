@@ -477,9 +477,9 @@ function extractVariablesFromConditionWithOrder(conditionText: string, variables
   cleanedText = cleanedText.replace(/[!=]==?\s*(?:'[^']*'|"[^"]*"|`[^`]*`|\d+|true|false|null|undefined)/g, '');
 
   // 提取基本变量和操作符组合
-  // 匹配：!var, !!var, var, var.prop, var['prop'], var["prop"], Boolean(var) 等模式
-  // 直接在正则表达式中匹配中括号访问，避免使用占位符
-  const varPattern = /(!+)?([a-zA-Z_$][a-zA-Z0-9_$]*(?:(?:\.[a-zA-Z_$][a-zA-Z0-9_$]*|\['[^']*'\]|\["[^"]*"\])*)?(?:\([^)]*\))?)/g;
+  // 匹配：!var, !!var, var, var.prop, var?.prop, var?.['prop'], var?.["prop"], Boolean(var) 等模式
+  // 直接在正则表达式中匹配中括号访问和可选链操作符，避免使用占位符
+  const varPattern = /(!+)?([a-zA-Z_$][a-zA-Z0-9_$]*(?:(?:\??\.[a-zA-Z_$][a-zA-Z0-9_$]*|(?:\?\.)?\['[^']*'\]|(?:\?\.)?\["[^"]*"\])*)?(?:\([^)]*\))?)/g;
   let match;
   while ((match = varPattern.exec(cleanedText)) !== null) {
     const prefix = match[1] || ""; // 获取前缀符号（如 ! 或 !!）
@@ -568,8 +568,8 @@ function fallbackExtractVariables(text: string, variables: Set<string>): void {
     // 先移除比较运算符右侧的值（字符串、数字等），避免它们被误识别为变量
     let cleanedCondition = condition.replace(/[!=]==?\s*(?:'[^']*'|"[^"]*"|`[^`]*`|\d+|true|false|null|undefined)/g, '');
 
-    // 使用支持中括号访问的正则表达式
-    const varPattern = /(!+)?([a-zA-Z_$][a-zA-Z0-9_$]*(?:(?:\.[a-zA-Z_$][a-zA-Z0-9_$]*|\['[^']*'\]|\["[^"]*"\])*)?(?:\([^)]*\))?)/g;
+    // 使用支持中括号访问和可选链操作符的正则表达式
+    const varPattern = /(!+)?([a-zA-Z_$][a-zA-Z0-9_$]*(?:(?:\??\.[a-zA-Z_$][a-zA-Z0-9_$]*|(?:\?\.)?\['[^']*'\]|(?:\?\.)?\["[^"]*"\])*)?(?:\([^)]*\))?)/g;
     let varMatch;
     while ((varMatch = varPattern.exec(cleanedCondition)) !== null) {
       const prefix = varMatch[1] || "";
