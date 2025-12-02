@@ -1,180 +1,158 @@
 # Console Extension
 
-智能 console.log 插入工具，支持智能变量提取和丰富的配置选项。
+[![Version](https://img.shields.io/visual-studio-marketplace/v/Liang5757.console-extension?color=blue&logo=visual-studio-code)](https://marketplace.visualstudio.com/items?itemName=Liang5757.console-extension)
+[![License](https://img.shields.io/github/license/Liang5757/console-extension?color=green)](https://github.com/Liang5757/console-extension/blob/master/LICENSE)
 
-## 功能特性
+## 简介
 
-### 智能变量提取
-- 自动提取普通变量声明：`const/let/var`
-- 支持对象解构：`const { name, age } = user`
-- 支持数组解构：`const [first, second] = array`
-- 提取 if 语句中的变量：`if (a && b || c)`
-- 保留操作符：`!flag`, `!!value`, `Boolean(x)`
-- 自动去重
+Console Extension 是一款智能 `console.log` 插入工具，能够**自动提取变量名**（支持解构、条件语句等复杂场景），**一键插入调试日志**，内置侧边栏视图统一管理所有日志，调试完成后一键清除。
 
-### 快捷键
-- Windows/Linux: `Ctrl + Shift + L`
-- macOS: `Cmd + Shift + L`
+**核心优势**：告别手动输入变量名，自动提取、保留操作符（`!flag`、`!!value`）、支持成员访问（`user?.name`）、配置灵活（文件名/行号/函数名可选）。
 
-### 使用方式
-1. **选中变量**后按快捷键，自动插入 console.log
-2. **多选变量**（按住 Ctrl/Cmd），批量插入
-3. **不选中**按快捷键，插入可编辑的 snippet 模板
+---
 
-## 配置选项
+## 安装指南
 
-打开 VS Code 设置，搜索 `consoleExtension` 可配置以下选项：
+从 VSCode 扩展市场搜索 `console extension` 安装
 
-### 基础配置
+## 快速开始
 
-#### `consoleExtension.prefix`
-- 类型: `string`
-- 默认值: `[debug]`
-- 说明: 日志前缀，用于标识由插件插入的日志，以便于扫描和管理
+### 1. 使用快捷键（推荐）
 
-#### `consoleExtension.quote`
-- 类型: `string`
-- 可选值: `'` | `"` | `` ` ``
-- 默认值: `'`
-- 说明: 字符串引号样式
+| 操作系统 | 快捷键 |
+|---------|--------|
+| Windows/Linux | `Ctrl + Shift + L` |
+| macOS | `Cmd + Shift + L` |
 
-#### `consoleExtension.semicolon`
-- 类型: `boolean`
-- 默认值: `true`
-- 说明: 是否在语句末尾添加分号
+**使用方式**：
+- **选中变量**后按快捷键 → 自动插入 `console.log`
+- **不选中任何内容**按快捷键 → 提取当前行的变量插入 `console.log`
 
-#### `consoleExtension.enableTreeView`
-- 类型: `boolean`
-- 默认值: `true`
-- 说明: 是否启用侧边栏树视图，显示所有插入的 console.log 语句
+### 2. 通过命令面板调用
 
-### 上下文信息
+按 `Ctrl+Shift+P` / `Cmd+Shift+P` 打开命令面板，输入：
 
-#### `consoleExtension.insertFileName`
-- 类型: `boolean`
-- 默认值: `false`
-- 说明: 是否插入文件名（如果文件名为 index，则显示相对路径）
-- 示例: `console.log('[debug] app.ts userName:', userName);`
-- 示例（index 文件）: `console.log('[debug] src/utils/index.ts userName:', userName);`
+```
+Insert Console Log
+```
 
-#### `consoleExtension.insertLineNumber`
-- 类型: `boolean`
-- 默认值: `false`
-- 说明: 是否插入当前行号
-- 示例: `console.log('[debug] L42 userName:', userName);`
+### 3. 自定义快捷键
 
-#### `consoleExtension.insertEnclosingClass`
-- 类型: `boolean`
-- 默认值: `false`
-- 说明: 是否包含所在类名
-- 示例: `console.log('[debug] UserService userName:', userName);`
+在 `keybindings.json` 中修改（文件 → 首选项 → 键盘快捷方式）：
 
-#### `consoleExtension.insertEnclosingFunction`
-- 类型: `boolean`
-- 默认值: `false`
-- 说明: 是否包含所在函数名
-- 示例: `console.log('[debug] getUserData() userName:', userName);`
-
-## 配置示例
-
-### 示例 1：基础配置
 ```json
 {
-  "consoleExtension.quote": "'",
-  "consoleExtension.semicolon": true,
-  "consoleExtension.prefix": "[debug]"
+  "key": "ctrl+alt+l",  // 自定义快捷键
+  "command": "console-extension.insertConsoleLog",
+  "when": "editorTextFocus"
 }
 ```
-输出：
-```javascript
-console.log('[debug] userName:', userName);
-```
 
-### 示例 2：包含文件名、行号和函数信息
+### 4. 核心配置项
+
+在 `settings.json` 中修改（文件 → 首选项 → 设置 → 搜索 `consoleExtension`）：
+
 ```json
 {
-  "consoleExtension.insertFileName": true,
-  "consoleExtension.insertLineNumber": true,
-  "consoleExtension.insertEnclosingFunction": true,
-  "consoleExtension.prefix": "[debug]"
+  "consoleExtension.prefix": "[debug]",             // 日志前缀
+  "consoleExtension.quote": "'",                    // 引号样式：' | " | `
+  "consoleExtension.semicolon": true,               // 是否添加分号
+  "consoleExtension.insertFileName": false,         // 是否插入文件名
+  "consoleExtension.insertLineNumber": false,       // 是否插入行号
+  "consoleExtension.insertEnclosingFunction": true, // 是否插入函数名
+  "consoleExtension.enableTreeView": true           // 是否启用侧边栏视图
 }
 ```
-输出：
+
+---
+
+## 核心功能
+
+### 1. 智能变量提取
+
+- **普通变量声明**：自动提取 `const/let/var` 声明的变量
+- **对象解构**：支持 `const { name, age } = user` 自动提取多个变量
+- **数组解构**：支持 `const [first, second] = array`
+- **条件语句**：从 `if (a && b || c)` 中提取所有变量
+- **保留操作符**：自动保留 `!flag`、`!!value`、`Boolean(x)` 等
+- **成员访问**：支持 `user.name`、`obj?.prop`、`arr[0]` 等
+- **自动去重**：多次选中同一变量时自动去重
+
+> 使用场景：在复杂条件或多变量解构时，无需手动输入，选中后一键生成所有 `console.log`
+
+### 2. 多选批量插入
+
+- 按住 `Ctrl/Cmd` 多选多行代码，按快捷键批量插入日志
+
+> 使用场景：同时调试多个变量时，快速生成所有调试代码
+
+### 3. 丰富的上下文信息
+
+| 配置项 | 默认值 | 说明 | 输出示例 |
+|--------|--------|------|----------|
+| `prefix` | `[debug]` | 日志前缀，便于过滤和清理 | `[debug] userName:` |
+| `insertFileName` | `false` | 插入文件名（index 文件显示相对路径） | `app.ts userName:` |
+| `insertLineNumber` | `false` | 插入当前行号 | `L42 userName:` |
+| `insertEnclosingClass` | `false` | 插入所在类名 | `UserService userName:` |
+| `insertEnclosingFunction` | `true` | 插入所在函数名 | `getUserData() userName:` |
+
+> 使用场景：在大型项目中快速定位日志来源，无需手动添加上下文信息
+
+### 4. 侧边栏统一管理
+
+启用 `enableTreeView` 后（默认启用），在 Explorer 侧边栏显示 **Console Logs** 视图：
+
+- **自动追踪**：识别所有由插件插入的 `console.log` 语句
+- **按文件组织**：清晰的层级结构展示
+- **快速跳转**：点击日志项跳转到代码位置
+- **一键清除**：调试完成后批量删除所有日志
+- **撤销支持**：删除后可通过 `Ctrl+Z` / `Cmd+Z` 撤销
+
+> 使用场景：项目中有大量调试日志时，统一管理和清理，避免遗留在代码中
+
+### 5. 灵活的样式配置
+
+| 配置项 | 可选值 | 默认值 | 说明 |
+|--------|--------|--------|------|
+| `quote` | `'` / `"` / `` ` `` | `'` | 字符串引号样式 |
+| `semicolon` | `true` / `false` | `true` | 是否添加分号 |
+
+> 使用场景：适配不同团队的代码规范（如 StandardJS 不使用分号）
+
+---
+
+## 截图与演示
+
+### 功能演示
+
+<!-- 预留：插件核心界面截图 -->
+<!-- 建议添加 GIF 演示：选中变量 → 按快捷键 → 自动插入日志 -->
+
+![插件核心界面截图](https://via.placeholder.com/800x450?text=Console+Extension+Demo)
+
+### 侧边栏视图
+
+<!-- 预留：侧边栏显示日志列表的截图 -->
+
+![侧边栏视图](https://via.placeholder.com/300x500?text=Sidebar+Tree+View)
+
+---
+
+## 使用示例
+
+### 示例 1：调试对象解构
+
 ```javascript
-console.log('[debug] app.ts L42 getUserData() userName:', userName);
-```
-
-### 示例 3：包含类名和函数名
-```json
-{
-  "consoleExtension.insertEnclosingClass": true,
-  "consoleExtension.insertEnclosingFunction": true,
-  "consoleExtension.prefix": "[debug]"
-}
-```
-输出（在类的方法中）：
-```javascript
-console.log('[debug] UserService.getUserData() userName:', userName);
-```
-
-### 示例 4：自定义前缀
-```json
-{
-  "consoleExtension.prefix": "🔍"
-}
-```
-输出：
-```javascript
-console.log('🔍 userName:', userName);
-```
-
-### 示例 5：完整配置
-```json
-{
-  "consoleExtension.quote": "\"",
-  "consoleExtension.semicolon": false,
-  "consoleExtension.insertFileName": true,
-  "consoleExtension.insertLineNumber": true,
-  "consoleExtension.insertEnclosingFunction": true,
-  "consoleExtension.prefix": "[LOG]",
-  "consoleExtension.enableTreeView": true
-}
-```
-输出：
-```javascript
-console.log("[LOG] app.ts L42 getUserData() userName:", userName)
-```
-
-## 侧边栏功能
-
-启用 `consoleExtension.enableTreeView` 后（默认启用），扩展会在 Explorer 侧边栏中显示"Console Logs"视图：
-
-### 功能
-- **自动追踪**：自动识别和显示所有由该插件插入的 console.log 语句
-- **文件组织**：按文件组织日志，展示清晰的层级结构
-- **快速导航**：点击日志项目可跳转到对应代码位置
-- **删除日志**：右键删除单个日志或批量删除所有日志
-- **刷新列表**：手动刷新日志列表以同步最新状态
-- **撤销支持**：删除后按 Ctrl+Z/Cmd+Z 撤销，日志自动恢复
-
-### 使用场景
-在调试过程中，侧边栏提供了一个统一的界面来管理所有的调试日志，让你可以：
-- 快速找到和定位所有调试代码
-- 调试完成后一键清除所有调试日志
-- 追踪代码中的日志分布
-
-## 使用场景
-
-### 场景 1：调试对象解构
-```javascript
-const { name, age } = user;
-// 选中上面一行，按快捷键（Ctrl+Shift+L 或 Cmd+Shift+L）
+const { name, age, role } = user;
+// 选中上面一行，按 Ctrl+Shift+L / Cmd+Shift+L
 // 自动插入：
 console.log('[debug] name:', name);
 console.log('[debug] age:', age);
+console.log('[debug] role:', role);
 ```
 
-### 场景 2：调试条件语句
+### 示例 2：调试复杂条件
+
 ```javascript
 if (!isValid && hasPermission || isAdmin) {
   // ...
@@ -186,44 +164,148 @@ console.log('[debug] hasPermission:', hasPermission);
 console.log('[debug] isAdmin:', isAdmin);
 ```
 
-### 场景 3：多行多个变量
-```javascript
-const userName = 'Alice';
-const userAge = 25;
-const userRole = 'admin';
-// 按住 Ctrl/Cmd 多选这三行，按快捷键
-// 自动插入：
-console.log('[debug] userName:', userName);
-console.log('[debug] userAge:', userAge);
-console.log('[debug] userRole:', userRole);
-```
+### 示例 3：包含文件名和行号
 
-### 场景 4：快速插入模板
-```javascript
-// 不选中任何内容，直接按快捷键
-// 插入 snippet 模板，可直接输入变量名
-console.log('[debug] variable:', variable);
-//           ^^^^^^^^ ^^^^^^^^
-//           光标会在这里，可以直接编辑
-```
+配置：
 
-### 场景 5：使用侧边栏管理日志
-```javascript
-// 启用 enableTreeView 后，所有插入的 console.log 会显示在侧边栏
-// 可以：
-// - 点击跳转到对应的日志位置
-// - 右键删除单个日志
-// - 点击刷新按钮更新日志列表
-// - 使用"清除全部日志"删除所有日志
-
-class UserService {
-  getUserData() {
-    const userName = 'Bob';
-    // 侧边栏会自动显示下面这行的日志
-    console.log('[debug] UserService.getUserData() userName:', userName);
-  }
+```json
+{
+  "consoleExtension.insertFileName": true,
+  "consoleExtension.insertLineNumber": true,
+  "consoleExtension.insertEnclosingFunction": true
 }
 ```
+
+输出：
+
+```javascript
+console.log('[debug] app.ts L42 getUserData() userName:', userName);
+```
+
+### 示例 4：自定义前缀
+
+配置：
+
+```json
+{
+  "consoleExtension.prefix": "🔍"
+}
+```
+
+输出：
+
+```javascript
+console.log('🔍 userName:', userName);
+```
+
+---
+
+## 兼容性
+
+| 项目 | 要求 |
+|------|------|
+| **VSCode 版本** | ≥ 1.22.0 |
+| **操作系统** | Windows / macOS / Linux |
+| **支持语言** | JavaScript / TypeScript（扩展已针对这两种语言优化） |
+
+> **注意**：虽然插件主要为 JavaScript/TypeScript 设计，但也可以在其他支持 `console.log` 的语言中使用基础功能。
+
+---
+
+## 常见问题（FAQ）
+
+### 1. 为什么按快捷键后没有反应？
+
+**可能原因**：
+- 快捷键冲突：检查 VSCode 键盘快捷方式设置（文件 → 首选项 → 键盘快捷方式），搜索 `console-extension.insertConsoleLog`
+- 编辑器未获得焦点：确保光标在代码编辑区域内
+
+**解决方案**：重新配置快捷键或通过命令面板调用（`Ctrl+Shift+P` → `Insert Console Log`）
+
+### 2. 如何一键清除所有调试日志？
+
+**方法 1**：在侧边栏 **Console Logs** 视图中，点击顶部的 **清除全部日志** 按钮（垃圾桶图标）
+**方法 2**：通过命令面板（`Ctrl+Shift+P`），输入 `Clear All Console Logs`
+
+> 提示：删除后可通过 `Ctrl+Z` / `Cmd+Z` 撤销
+
+### 3. 如何禁用侧边栏视图？
+
+在 `settings.json` 中设置：
+
+```json
+{
+  "consoleExtension.enableTreeView": false
+}
+```
+
+保存后重新加载窗口（`Ctrl+Shift+P` → `Reload Window`）
+
+### 4. 变量提取不准确怎么办？
+
+如果自动提取的变量不符合预期，可以：
+- 手动选中具体的变量名再按快捷键
+- 不选中任何内容按快捷键，使用 snippet 模板手动输入
+- 在 [GitHub Issues](https://github.com/Liang5757/console-extension/issues) 中反馈问题（附上代码示例）
+
+---
+
+## 贡献指南
+
+欢迎提交 Issue 和 Pull Request！以下是参与贡献的步骤：
+
+### 本地调试插件
+
+1. **克隆仓库**：
+
+```bash
+git clone https://github.com/Liang5757/console-extension.git
+cd console-extension
+```
+
+2. **安装依赖**：
+
+```bash
+npm install
+```
+
+3. **编译代码**：
+
+```bash
+npm run compile
+```
+
+或启用监听模式（自动编译）：
+
+```bash
+npm run watch
+```
+
+4. **调试运行**：
+
+按 `F5` 启动扩展开发宿主（Extension Development Host），在新窗口中测试插件功能
+
+5. **运行测试**：
+
+```bash
+npm test
+```
+
+> 项目包含 49 个单元测试，覆盖所有核心功能
+
+### 提交 Pull Request
+
+1. Fork 本仓库并创建新分支：`git checkout -b feature/your-feature`
+2. 提交代码：`git commit -m "feat: add your feature"`
+3. 推送到远程分支：`git push origin feature/your-feature`
+4. 在 GitHub 上创建 Pull Request
+
+**代码规范**：
+- 遵循 TypeScript + ESLint 规范
+- 新增功能需补充单元测试
+- 提交信息遵循 [Conventional Commits](https://www.conventionalcommits.org/)
+
+---
 
 ## 项目结构
 
@@ -235,50 +317,36 @@ src/
 │   ├── goToLog.ts            # 跳转到日志命令
 │   ├── removeLog.ts          # 删除日志命令
 │   ├── clearAllLogs.ts       # 清除全部日志命令
-│   ├── refreshLogs.ts        # 刷新日志命令
-│   └── index.ts              # 导出所有命令
+│   └── refreshLogs.ts        # 刷新日志命令
 ├── types/                    # 类型定义
-│   ├── index.ts
 │   └── consoleLogItem.ts     # 日志项目接口
 ├── views/                    # UI 组件
 │   ├── consoleLogTreeProvider.ts  # 树视图数据提供者
-│   ├── consoleLogTreeItem.ts      # 树项目渲染
-│   └── index.ts
+│   └── consoleLogTreeItem.ts      # 树项目渲染
 └── utils/
-    ├── variableExtractor.ts       # 变量提取逻辑
+    ├── variableExtractor.ts       # 变量提取逻辑（基于 acorn AST）
     ├── templateManager.ts         # 配置和日志构建
     ├── consoleInserter.ts         # 日志插入逻辑
     ├── consoleLogScanner.ts       # 日志扫描和识别
     └── consoleLogTracker.ts       # 日志追踪和状态管理
 ```
 
-## 测试
+---
 
-项目包含 49 个单元测试，覆盖所有核心功能：
+## 许可证
 
-```bash
-npm test
-```
+[MIT License](LICENSE)
 
-## 开发
+Copyright (c) 2024 Liang5757
 
-```bash
-# 安装依赖
-npm install
+---
 
-# 编译
-npm run compile
+## 反馈与支持
 
-# 监听模式
-npm run watch
+- **问题反馈**：[GitHub Issues](https://github.com/Liang5757/console-extension/issues)
+- **功能建议**：欢迎在 Issues 中讨论
+- **Star 支持**：如果这个插件帮到了你，请在 [GitHub](https://github.com/Liang5757/console-extension) 给个 ⭐
 
-# 运行测试
-npm test
+---
 
-# 调试
-按 F5 启动扩展开发宿主
-```
-
-## License
-
-MIT
+**Made with ❤️ by developers, for developers**
