@@ -2,7 +2,7 @@
   "name": "console-extension",
   "displayName": "Console Extension",
   "description": "Smart console.log insertion tool with intelligent variable extraction and rich configuration options",
-  "version": "1.0.2",
+  "version": "1.0.4",
   "publisher": "Liang5757",
   "repository": {
     "type": "git",
@@ -143,10 +143,11 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
+    "vscode:prepublish": "npm run esbuild-base -- --production",
+    "esbuild-base": "node esbuild.js",
+    "compile": "npm run esbuild-base",
     "watch": "tsc -watch -p ./",
-    "pretest": "npm run compile && npm run lint",
+    "pretest": "tsc -p ./ && npm run lint",
     "lint": "eslint src",
     "test": "vscode-test"
   },
@@ -156,6 +157,7 @@
     "@types/vscode": "^1.22.0",
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2",
+    "esbuild": "^0.27.1",
     "eslint": "^9.39.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.3"

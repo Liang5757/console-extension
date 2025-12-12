@@ -121,23 +121,6 @@ Insert Console Log
 
 ---
 
-## 截图与演示
-
-### 功能演示
-
-<!-- 预留：插件核心界面截图 -->
-<!-- 建议添加 GIF 演示：选中变量 → 按快捷键 → 自动插入日志 -->
-
-![插件核心界面截图](https://via.placeholder.com/800x450?text=Console+Extension+Demo)
-
-### 侧边栏视图
-
-<!-- 预留：侧边栏显示日志列表的截图 -->
-
-![侧边栏视图](https://via.placeholder.com/300x500?text=Sidebar+Tree+View)
-
----
-
 ## 使用示例
 
 ### 示例 1：调试对象解构
